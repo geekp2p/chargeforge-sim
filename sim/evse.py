@@ -11,7 +11,7 @@ import websockets
 
 from ocpp.v16 import call
 from ocpp.v16.enums import Action, Measurand
-from ocpp.transport import WebSocketTransport
+# from ocpp.transport import WebSocketTransport
 
 from .config import *
 from .state_machine import EVSEModel, EVSEState
@@ -100,13 +100,20 @@ async def ocpp_client():
         try:
             logging.info(f"Connecting to CSMS: {url}")
             async with websockets.connect(url, subprotocols=['ocpp1.6'], ssl=ssl_context) as ws:
-                transport = WebSocketTransport(ws)
                 cp = EVSEChargePoint(
-                    cpid, transport, model,
+                    cpid, ws, model,
                     send_status_cb=send_status,
                     start_cb=start_local,
                     stop_cb=stop_local_by_tx
                 )
+            # async with websockets.connect(url, subprotocols=['ocpp1.6'], ssl=ssl_context) as ws:
+            #     transport = WebSocketTransport(ws)
+            #     cp = EVSEChargePoint(
+            #         cpid, transport, model,
+            #         send_status_cb=send_status,
+            #         start_cb=start_local,
+            #         stop_cb=stop_local_by_tx
+            #     )
                 # Boot → Available
                 asyncio.create_task(cp.start())
                 await asyncio.sleep(1)

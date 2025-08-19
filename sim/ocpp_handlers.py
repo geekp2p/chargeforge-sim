@@ -29,7 +29,7 @@ class EVSEChargePoint(CP):
             return call_result.RemoteStartTransactionPayload(
                 status=RemoteStartStopStatus.rejected
             )
-        await self.on_start_local(cid, id_tag)
+        asyncio.create_task(self.on_start_local(cid, id_tag))
         return call_result.RemoteStartTransactionPayload(
             status=RemoteStartStopStatus.accepted
         )
@@ -41,7 +41,7 @@ class EVSEChargePoint(CP):
             return call_result.RemoteStopTransactionPayload(
                 status=RemoteStartStopStatus.rejected
             )
-        await self.on_stop_local(int(transaction_id), None)
+        asyncio.create_task(self.on_stop_local(int(transaction_id), None))
         return call_result.RemoteStopTransactionPayload(
             status=RemoteStartStopStatus.accepted
         )
