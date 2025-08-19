@@ -3,7 +3,12 @@ import logging
 from datetime import datetime, timezone
 from ocpp.routing import on
 from ocpp.v16 import call_result, ChargePoint as CP
-from ocpp.v16.enums import AuthorizationStatus, RegistrationStatus, Action
+from ocpp.v16.enums import (
+    AuthorizationStatus,
+    RegistrationStatus,
+    Action,
+    RemoteStartStopStatus,
+)
 
 class EVSEChargePoint(CP):
     def __init__(self, id, connection, model, send_status_cb, start_cb, stop_cb):
@@ -13,7 +18,28 @@ class EVSEChargePoint(CP):
         self.on_start_local = start_cb
         self.on_stop_local = stop_cb
 
-    # ====== CSMS -> EVSE (RemoteStart/RemoteStop) handled in evse.py ======
+    # ====== CSMS -> EVSE ======
+
+    @on(Action.RemoteStartTransaction)
+    async def on_remote_start(self, id_tag, connector_id=None, **kwargs):
+        cid = int(connector_id or 1)
+        c = self.model.get(cid)
+        # reject when not plugged
+        if not c.plugged:
+            return call_result.RemoteStartTransactionPayload(
+                status=RemoteStartStopStatus.rejected
+            )
+        await self.on_start_local(cid, id_tag)
+        return call_result.RemoteStartTransactionPayload(
+            status=RemoteStartStopStatus.accepted
+        )
+
+    @on(Action.RemoteStopTransaction)
+    async def on_remote_stop(self, transaction_id, **kwargs):
+        await self.on_stop_local(int(transaction_id), None)
+        return call_result.RemoteStopTransactionPayload(
+            status=RemoteStartStopStatus.accepted
+        )
 
     # ====== EVSE -> CSMS handlers ======
     @on(Action.BootNotification)
