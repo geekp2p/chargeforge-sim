@@ -14,3 +14,7 @@
 - [ ] รองรับ WSS/TLS
 - [ ] โหมด OCPP 2.0.1
 - [ ] Integration tests (pytest)
+
+### Requirements
+- Python 3.10+ (ทดสอบกับ 3.12)
+- ติดตั้ง dependencies ใน `sim/requirements.txt` (โดยใช้ `ocpp` 0.26.0 รองรับ OCPP 1.6J ผ่าน WebSocket)
