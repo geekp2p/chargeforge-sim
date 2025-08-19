@@ -19,6 +19,9 @@ class ConnectorSim:
         self.id_tag = None
         self.meter_wh = meter_start_wh
         self.tx_id = None
+        # keep track of the current OCPP error code so faults can be
+        # injected and cleared via the HTTP API.
+        self.error_code = "NoError"
 
     def to_status(self) -> str:
         # map internal -> OCPP status set
@@ -30,6 +33,14 @@ class ConnectorSim:
             return "Charging"
         if self.state == EVSEState.FINISHING:
             return "Finishing"
+        if self.state == EVSEState.FAULTED:
+            return "Faulted"
+        if self.state == EVSEState.SUSPENDED_EV:
+            return "SuspendedEV"
+        if self.state == EVSEState.SUSPENDED_EVSE:
+            return "SuspendedEVSE"
+        if self.state == EVSEState.OCCUPIED:
+            return "Occupied"
         return "Available"
 
 class EVSEModel:
@@ -63,4 +74,23 @@ class EVSEModel:
         c = self.connectors[cid]
         c.tx_id = None
         c.session_active = False
+        return c
+
+    # ----- state / fault helpers -----
+    def set_state(self, cid: int, state: str) -> ConnectorSim:
+        c = self.get(cid)
+        c.state = state
+        return c
+
+    def set_fault(self, cid: int, error_code: str) -> ConnectorSim:
+        c = self.get(cid)
+        c.state = EVSEState.FAULTED
+        c.error_code = error_code
+        return c
+
+    def clear_fault(self, cid: int) -> ConnectorSim:
+        c = self.get(cid)
+        c.error_code = "NoError"
+        # when a fault is cleared we treat the connector as Available
+        c.state = EVSEState.AVAILABLE
         return c

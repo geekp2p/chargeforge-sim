@@ -30,15 +30,18 @@ cp = None  # type: ignore
 # -------- helper: send StatusNotification --------
 async def send_status(connector_id: int):
     global cp
-    st = model.get(connector_id).to_status()
+    c = model.get(connector_id)
+    st = c.to_status()
     req = call.StatusNotificationPayload(
         connector_id=connector_id,
-        error_code="NoError",
+        error_code=c.error_code,
         status=st,
         timestamp=datetime.now(timezone.utc).isoformat()
     )
     await cp.call(req)  # type: ignore
-    logging.info(f"StatusNotification sent: connector={connector_id}, status={st}")
+    logging.info(
+        f"StatusNotification sent: connector={connector_id}, status={st}, error={c.error_code}"
+    )
 
 # -------- local state transitions --------
 async def start_local(connector_id: int, id_tag: str):
@@ -105,7 +108,24 @@ async def ocpp_client():
 
                 # tasks: heartbeat, metering
                 hb_task = asyncio.create_task(send_heartbeat_loop())
+                mv_task = asyncio.create_task(send_meter_loop())
+                await asyncio.gather(hb_task, mv_task)
+        except Exception as e:
+            logging.error(f"OCPP client error: {e}")
+            await asyncio.sleep(5)
+
+async def send_heartbeat_loop():
+    while True:
+        try:
+            req = call.HeartbeatPayload()
+            await cp.call(req)  # type: ignore
+        except Exception as e:
+            logging.error(f"Heartbeat failed: {e}")
+            return
+        await asyncio.sleep(SEND_HEARTBEAT_SEC)
+
 async def send_meter_loop():
+    while True:
         t = datetime.now(timezone.utc).isoformat()
         for c in model.connectors.values():
             if not c.session_active:
@@ -120,6 +140,7 @@ async def send_meter_loop():
             req = call.MeterValuesPayload(connector_id=c.id, meter_value=mv)
             await cp.call(req)  # type: ignore
             logging.info(f"MeterValues: cid={c.id}, energy(Wh)={c.meter_wh}")
+        await asyncio.sleep(METER_PERIOD_SEC)
 
 # -------- HTTP control for simulating plug/unplug & local start/stop --------
 @app.post("/plug/{connector_id}")
@@ -156,6 +177,38 @@ async def local_stop(connector_id: int):
         return {"ok": False, "error": "no active session"}
     await stop_local_by_tx(c.tx_id, c.meter_wh)  # type: ignore
     return {"ok": True}
+
+# -------- fault / suspend injection --------
+
+@app.post("/fault/{connector_id}")
+async def inject_fault(connector_id: int, error_code: str = "OtherError"):
+    c = model.set_fault(connector_id, error_code)
+    await send_status(connector_id)
+    return {"ok": True, "connector": connector_id, "error_code": c.error_code}
+
+@app.post("/clear_fault/{connector_id}")
+async def clear_fault(connector_id: int):
+    model.clear_fault(connector_id)
+    await send_status(connector_id)
+    return {"ok": True, "connector": connector_id}
+
+@app.post("/suspend_ev/{connector_id}")
+async def suspend_ev(connector_id: int):
+    model.set_state(connector_id, EVSEState.SUSPENDED_EV)
+    await send_status(connector_id)
+    return {"ok": True, "connector": connector_id, "state": EVSEState.SUSPENDED_EV}
+
+@app.post("/suspend_evse/{connector_id}")
+async def suspend_evse(connector_id: int):
+    model.set_state(connector_id, EVSEState.SUSPENDED_EVSE)
+    await send_status(connector_id)
+    return {"ok": True, "connector": connector_id, "state": EVSEState.SUSPENDED_EVSE}
+
+@app.post("/resume/{connector_id}")
+async def resume(connector_id: int):
+    model.set_state(connector_id, EVSEState.AVAILABLE)
+    await send_status(connector_id)
+    return {"ok": True, "connector": connector_id, "state": EVSEState.AVAILABLE}
 
 async def main():
     # run OCPP client and HTTP API together
