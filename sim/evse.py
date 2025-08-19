@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone
+import random
 
 import uvicorn
 from fastapi import FastAPI
@@ -133,13 +134,35 @@ async def send_meter_loop():
             # เพิ่มพลังงาน (Wh) ตาม rate * period
             added_wh = int((METER_RATE_W * METER_PERIOD_SEC) / 3600)
             c.meter_wh += added_wh
-            mv = [{
-                "timestamp": t,
-                "sampledValue": [{"value": str(c.meter_wh), "measurand": "Energy.Active.Import.Register"}]
-            }]
+
+            # base values for measurands
+            base_voltage = 230.0
+            base_power = float(METER_RATE_W)
+            base_current = base_power / base_voltage
+
+            # apply small random deltas
+            current_a = base_current + random.uniform(-1.0, 1.0)
+            voltage_v = base_voltage + random.uniform(-1.0, 1.0)
+            power_w = base_power + random.uniform(-100.0, 100.0)
+
+            sampled = [
+                {"value": str(c.meter_wh), "measurand": "Energy.Active.Import.Register"},
+                {"value": f"{current_a:.2f}", "measurand": "Current.Import"},
+                {"value": f"{voltage_v:.1f}", "measurand": "Voltage"},
+                {"value": f"{power_w:.1f}", "measurand": "Power.Active.Import"},
+            ]
+            mv = [{"timestamp": t, "sampledValue": sampled}]
+
             req = call.MeterValuesPayload(connector_id=c.id, meter_value=mv)
             await cp.call(req)  # type: ignore
-            logging.info(f"MeterValues: cid={c.id}, energy(Wh)={c.meter_wh}")
+            logging.info(
+                "MeterValues: cid=%s, energy(Wh)=%s, current(A)=%.2f, voltage(V)=%.1f, power(W)=%.1f",
+                c.id,
+                c.meter_wh,
+                current_a,
+                voltage_v,
+                power_w,
+            )
         await asyncio.sleep(METER_PERIOD_SEC)
 
 # -------- HTTP control for simulating plug/unplug & local start/stop --------
