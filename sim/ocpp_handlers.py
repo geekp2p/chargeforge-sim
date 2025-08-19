@@ -81,3 +81,66 @@ class EVSEChargePoint(CP):
     async def on_stop_transaction(self, transaction_id, meter_stop, timestamp, **kwargs):
         await self.on_stop_local(int(transaction_id), meter_stop)
         return call_result.StopTransactionPayload(id_tag_info={"status": AuthorizationStatus.accepted})
+
+    @on(Action.GetConfiguration)
+    async def on_get_configuration(self, key: list | None = None, **kwargs):
+        config = [
+            {"key": "AuthorizeRemoteTxRequests", "readonly": False, "value": "false"},
+            {"key": "AuthorizationCacheEnabled", "readonly": False, "value": "false"},
+            {"key": "LocalAuthListEnabled", "readonly": False, "value": "true"},
+            {"key": "LocalAuthListMaxLength", "readonly": True, "value": "100"},
+            {"key": "ClockAlignedDataInterval", "readonly": False, "value": "1800"},
+            {"key": "ConnectionTimeOut", "readonly": False, "value": "60"},
+            {"key": "GetConfigurationMaxKeys", "readonly": True, "value": "100"},
+            {"key": "HeartbeatInterval", "readonly": False, "value": "300"},
+            {"key": "LocalAuthorizeOffline", "readonly": False, "value": "false"},
+            {"key": "LocalPreAuthorize", "readonly": False, "value": "false"},
+            {"key": "MeterValuesAlignedData", "readonly": False, "value": "Energy.Active.Import.Register,Current.Import,Voltage,Power.Active.Import,SoC,Temperature"},
+            {"key": "MeterValuesAlignedDataMaxLength", "readonly": True, "value": "6"},
+            {"key": "MeterValuesSampledData", "readonly": False, "value": "Energy.Active.Import.Register,Current.Import,Voltage,Power.Active.Import,SoC,Temperature,Power.Offered"},
+            {"key": "MeterValuesSampledDataMaxLength", "readonly": True, "value": "7"},
+            {"key": "MeterValueSampleInterval", "readonly": False, "value": "60"},
+            {"key": "NumberOfConnectors", "readonly": True, "value": "2"},
+            {"key": "ReserveConnectorZeroSupported", "readonly": True, "value": "false"},
+            {"key": "ResetRetries", "readonly": False, "value": "120"},
+            {"key": "ConnectorPhaseRotation", "readonly": False, "value": "NotApplicable"},
+            {"key": "ConnectorPhaseRotationMaxLength", "readonly": True, "value": "1"},
+            {"key": "StopTransactionOnEVSideDisconnect", "readonly": True, "value": "true"},
+            {"key": "AllowOfflineTxForUnknownId", "readonly": False, "value": "false"},
+            {"key": "StopTransactionOnInvalidId", "readonly": False, "value": "false"},
+            {"key": "StopTxnAlignedData", "readonly": False, "value": "Energy.Active.Import.Register,Current.Import,Voltage,Power.Active.Import,SoC,Temperature"},
+            {"key": "StopTxnAlignedDataMaxLength", "readonly": True, "value": "6"},
+            {"key": "StopTxnSampledData", "readonly": False, "value": "Energy.Active.Import.Register,Current.Import,Voltage,Power.Active.Import,SoC,Temperature"},
+            {"key": "StopTxnSampledDataMaxLength", "readonly": True, "value": "6"},
+            {"key": "SupportedFeatureProfiles", "readonly": True, "value": "Core,FirmwareManagement,LocalAuthListManagement,Reservation,SmartCharging,RemoteTrigger"},
+            {"key": "SupportedFeatureProfilesMaxLength", "readonly": True, "value": "6"},
+            {"key": "TransactionMessageAttempts", "readonly": False, "value": "3"},
+            {"key": "TransactionMessageRetryInterval", "readonly": False, "value": "60"},
+            {"key": "UnlockConnectorOnEVSideDisconnect", "readonly": False, "value": "true"},
+            {"key": "MaxEnergyOnInvalidId", "readonly": False, "value": "10"},
+            {"key": "VendorInfo", "readonly": True, "value": "Gresgying"},
+            {"key": "WebSocketPingInterval", "readonly": False, "value": "10"},
+            {"key": "ChargeProfileMaxStackLevel", "readonly": True, "value": "20"},
+            {"key": "ChargingScheduleAllowedChargingRateUnit", "readonly": True, "value": "Current,Power"},
+            {"key": "ChargingScheduleMaxPeriods", "readonly": True, "value": "24"},
+            {"key": "MaxChargingProfilesInstalled", "readonly": True, "value": "1"},
+            {"key": "OcppUrl", "readonly": False, "value": "ws://45.136.236.186:9000/ocpp/Gresgying01"},
+            {"key": "Rate", "readonly": False, "value": "0"},
+            {"key": "Monetaryunit", "readonly": False, "value": "€"},
+            {"key": "AutoCharge", "readonly": False, "value": "true"},
+            {"key": "QRcodeConnectorID1", "readonly": False, "value": ""},
+            {"key": "QRcodeConnectorID2", "readonly": False, "value": ""},
+        ]
+        if key:
+            requested = set(key if isinstance(key, list) else [key])
+            found = [item for item in config if item["key"] in requested]
+            unknown = [k for k in requested if k not in {i["key"] for i in config}]
+            return call_result.GetConfigurationPayload(
+                configuration_key=found or None,
+                unknown_key=unknown or None,
+            )
+        return call_result.GetConfigurationPayload(configuration_key=config)
+
+    @on(Action.DataTransfer)
+    async def on_data_transfer(self, vendor_id, **kwargs):
+        return call_result.DataTransferPayload(status=DataTransferStatus.unknown_vendor_id)
