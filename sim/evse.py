@@ -28,8 +28,8 @@ model = EVSEModel(connectors=CONNECTORS, meter_start_wh=METER_START_WH)
 cp = None  # type: ignore
 
 # -------- helper: send StatusNotification --------
-async def send_status(connector_id: int):␊
-    global cp␊
+async def send_status(connector_id: int):
+    global cp
     st = model.get(connector_id).to_status()
     req = call.StatusNotificationPayload(
         connector_id=connector_id,
@@ -55,32 +55,31 @@ async def start_local(connector_id: int, id_tag: str):
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
     conf = await cp.call(req)  # type: ignore
-    c.tx_id = conf.transaction_id
+    model.assign_tx(connector_id, conf.transaction_id)
     logging.info(
-        f"StartTransaction confirmed: connector={connector_id}, tx_id={c.tx_id}"
+        f"StartTransaction confirmed: connector={connector_id}, tx_id={conf.transaction_id}"
     )
 
 async def stop_local_by_tx(tx_id: int, meter_stop: int | None = None):
-    for c in model.connectors.values():
-        if not c.session_active or c.tx_id != tx_id:
-            continue
-        if meter_stop is None:
-            meter_stop = c.meter_wh
-        req = call.StopTransactionPayload(
-            transaction_id=tx_id,
-            meter_stop=meter_stop,
-            timestamp=datetime.now(timezone.utc).isoformat(),
-        )
-        await cp.call(req)  # type: ignore
-        c.session_active = False
-        c.state = EVSEState.FINISHING
-        await send_status(c.id)
-        await asyncio.sleep(1)
-        c.state = EVSEState.AVAILABLE
-        c.tx_id = None
-        c.id_tag = None
-        await send_status(c.id)
+    c = model.get_by_tx(tx_id)
+    if c is None:
         return
+    if meter_stop is None:
+        meter_stop = c.meter_wh
+    req = call.StopTransactionPayload(
+        transaction_id=tx_id,
+        meter_stop=meter_stop,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )
+    await cp.call(req)  # type: ignore
+    c.state = EVSEState.FINISHING
+    await send_status(c.id)
+    await asyncio.sleep(1)
+    c.state = EVSEState.AVAILABLE
+    c.id_tag = None
+    await send_status(c.id)
+    model.clear_tx(tx_id)
+    return
 
 # -------- OCPP client main --------
 async def ocpp_client():
@@ -106,28 +105,7 @@ async def ocpp_client():
 
                 # tasks: heartbeat, metering
                 hb_task = asyncio.create_task(send_heartbeat_loop())
-                mv_task = asyncio.create_task(send_meter_loop())
-
-                await ws.wait_closed()
-                hb_task.cancel()
-                mv_task.cancel()
-        except Exception as e:
-            logging.error(f"OCPP connection error: {e}")
-        logging.info("Reconnecting to CSMS in 5s...")
-        await asyncio.sleep(5)
-
-async def send_heartbeat_loop():
-    while True:
-        try:
-            await asyncio.sleep(SEND_HEARTBEAT_SEC)
-            req = call.HeartbeatPayload()
-            await cp.call(req)  # type: ignore
-        except Exception:
-            return
-
 async def send_meter_loop():
-    while True:
-        await asyncio.sleep(METER_PERIOD_SEC)
         t = datetime.now(timezone.utc).isoformat()
         for c in model.connectors.values():
             if not c.session_active:
@@ -156,9 +134,9 @@ async def plug(connector_id: int):
 async def unplug(connector_id: int):
     c = model.get(connector_id)
     c.plugged = False
-    c.session_active = False
+    if c.tx_id is not None:
+        model.clear_tx(c.tx_id)
     c.state = EVSEState.AVAILABLE
-    c.tx_id = None
     c.id_tag = None
     await send_status(connector_id)
     return {"ok": True, "connector": connector_id, "plugged": False}

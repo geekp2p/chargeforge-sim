@@ -24,8 +24,8 @@ class EVSEChargePoint(CP):
     async def on_remote_start(self, id_tag, connector_id=None, **kwargs):
         cid = int(connector_id or 1)
         c = self.model.get(cid)
-        # reject when not plugged
-        if not c.plugged:
+        # reject when not plugged or already charging
+        if not c.plugged or c.session_active:
             return call_result.RemoteStartTransactionPayload(
                 status=RemoteStartStopStatus.rejected
             )
@@ -36,6 +36,11 @@ class EVSEChargePoint(CP):
 
     @on(Action.RemoteStopTransaction)
     async def on_remote_stop(self, transaction_id, **kwargs):
+        # only stop if the transaction id belongs to an active session
+        if self.model.get_by_tx(int(transaction_id)) is None:
+            return call_result.RemoteStopTransactionPayload(
+                status=RemoteStartStopStatus.rejected
+            )
         await self.on_stop_local(int(transaction_id), None)
         return call_result.RemoteStopTransactionPayload(
             status=RemoteStartStopStatus.accepted
