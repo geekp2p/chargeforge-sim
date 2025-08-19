@@ -117,6 +117,11 @@ async def ocpp_client():
                 # Boot → Available
                 asyncio.create_task(cp.start())
                 await asyncio.sleep(1)
+                boot_req = call.BootNotificationPayload(
+                    charge_point_model="CF-Sim",
+                    charge_point_vendor="ChargeForge",
+                )
+                await cp.call(boot_req)
                 for cid in model.connectors.keys():
                     await send_status(cid)
 

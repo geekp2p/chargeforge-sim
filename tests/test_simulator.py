@@ -5,6 +5,14 @@ from ocpp.v16.enums import RemoteStartStopStatus
 
 
 @pytest.mark.asyncio
+async def test_boot_notification_sent(simulator):
+    csms_cp = simulator["csms"].cp
+    bn = await asyncio.wait_for(csms_cp.boot_notifications.get(), timeout=5)
+    assert bn["charge_point_model"] == "CF-Sim"
+    assert bn["charge_point_vendor"] == "ChargeForge"
+
+
+@pytest.mark.asyncio
 async def test_health_endpoint(simulator):
     client = simulator["client"]
     resp = await client.get("/health")

@@ -26,10 +26,17 @@ class MockCSMS(CP):
         super().__init__(id, websocket)
         self.start_requests: asyncio.Queue = asyncio.Queue()
         self.stop_requests: asyncio.Queue = asyncio.Queue()
+        self.boot_notifications: asyncio.Queue = asyncio.Queue()
 
     # ---- handlers for messages from EVSE ----
     @on(Action.BootNotification)
-    async def on_boot(self, **kwargs):
+    async def on_boot(self, charge_point_model, charge_point_vendor, **kwargs):
+        await self.boot_notifications.put(
+            {
+                "charge_point_model": charge_point_model,
+                "charge_point_vendor": charge_point_vendor,
+            }
+        )
         return call_result.BootNotificationPayload(
             current_time="0", interval=10, status=RegistrationStatus.accepted
         )
