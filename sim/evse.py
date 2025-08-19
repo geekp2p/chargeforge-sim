@@ -117,13 +117,31 @@ async def ocpp_client():
                 # Boot → Available
                 asyncio.create_task(cp.start())
                 await asyncio.sleep(1)
+                # boot_req = call.BootNotificationPayload(
+                #     charge_point_model="CF-Sim",
+                #     charge_point_vendor="ChargeForge",
+                # )
+                # await cp.call(boot_req)
+                # for cid in model.connectors.keys():
+                #     await send_status(cid)
                 boot_req = call.BootNotificationPayload(
-                    charge_point_model="CF-Sim",
-                    charge_point_vendor="ChargeForge",
+                    charge_point_model=CP_MODEL,
+                    charge_point_vendor=CP_VENDOR,
+                    charge_point_serial_number=CP_SERIAL_NUMBER,
+                    firmware_version=FIRMWARE_VERSION,
+                    iccid=ICCID,
                 )
                 await cp.call(boot_req)
                 for cid in model.connectors.keys():
                     await send_status(cid)
+                # send connector 0 status to mimic real chargers
+                root_status = call.StatusNotificationPayload(
+                    connector_id=0,
+                    error_code="NoError",
+                    status=EVSEState.AVAILABLE,
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                )
+                await cp.call(root_status)
 
                 # tasks: heartbeat, metering
                 hb_task = asyncio.create_task(send_heartbeat_loop())
@@ -162,24 +180,72 @@ async def send_meter_loop():
             current_a = base_current + random.uniform(-1.0, 1.0)
             voltage_v = base_voltage + random.uniform(-1.0, 1.0)
             power_w = base_power + random.uniform(-100.0, 100.0)
+            temp_c = 28.0 + random.uniform(-0.5, 0.5)
+            soc = 0.0
+
+            energy_kwh = c.meter_wh / 1000
 
             sampled = [
-                {"value": str(c.meter_wh), "measurand": "Energy.Active.Import.Register"},
-                {"value": f"{current_a:.2f}", "measurand": "Current.Import"},
-                {"value": f"{voltage_v:.1f}", "measurand": "Voltage"},
-                {"value": f"{power_w:.1f}", "measurand": "Power.Active.Import"},
+                {
+                    "value": f"{energy_kwh:.3f}",
+                    "context": "Sample.Clock",
+                    "format": "Raw",
+                    "measurand": "Energy.Active.Import.Register",
+                    "location": "Body",
+                    "unit": "kWh",
+                },
+                {
+                    "value": f"{current_a:.2f}",
+                    "context": "Sample.Clock",
+                    "format": "Raw",
+                    "measurand": "Current.Import",
+                    "location": "Body",
+                    "unit": "A",
+                },
+                {
+                    "value": f"{voltage_v:.1f}",
+                    "context": "Sample.Clock",
+                    "format": "Raw",
+                    "measurand": "Voltage",
+                    "location": "Body",
+                    "unit": "V",
+                },
+                {
+                    "value": f"{power_w/1000:.1f}",
+                    "context": "Sample.Clock",
+                    "format": "Raw",
+                    "measurand": "Power.Active.Import",
+                    "location": "Body",
+                    "unit": "kW",
+                },
+                {
+                    "value": f"{soc:.0f}",
+                    "context": "Sample.Clock",
+                    "format": "Raw",
+                    "measurand": "SoC",
+                    "location": "EV",
+                    "unit": "Percent",
+                },
+                {
+                    "value": f"{temp_c:.1f}",
+                    "context": "Sample.Clock",
+                    "format": "Raw",
+                    "measurand": "Temperature",
+                    "location": "Outlet",
+                    "unit": "Celsius",
+                },
             ]
             mv = [{"timestamp": t, "sampledValue": sampled}]
 
             req = call.MeterValuesPayload(connector_id=c.id, meter_value=mv)
             await cp.call(req)  # type: ignore
             logging.info(
-                "MeterValues: cid=%s, energy(Wh)=%s, current(A)=%.2f, voltage(V)=%.1f, power(W)=%.1f",
+                "MeterValues: cid=%s, energy(kWh)=%.3f, current(A)=%.2f, voltage(V)=%.1f, power(kW)=%.1f",
                 c.id,
-                c.meter_wh,
+                energy_kwh,
                 current_a,
                 voltage_v,
-                power_w,
+                power_w / 1000,
             )
         await asyncio.sleep(METER_PERIOD_SEC)
 

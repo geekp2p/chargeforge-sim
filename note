@@ -73,3 +73,22 @@ curl -X POST \
 
 
 docker compose --env-file .env up --build -d
+
+docker compose build --no-cache
+
+docker compose --env-file .env up -d
+
+
+# 1) หยุดและลบ container + network + volumes ที่ compose สร้างไว้
+docker compose down -v
+
+# 2) build ใหม่โดยไม่ใช้ cache และสั่ง start แบบ detached
+docker compose --env-file .env up --build --no-cache -d
+
+
+docker image prune -af
+
+docker compose down -v
+docker image prune -af
+docker compose --env-file .env up --build --no-cache -d
+docker compose down -v && docker compose build --no-cache && docker compose --env-file .env up -d

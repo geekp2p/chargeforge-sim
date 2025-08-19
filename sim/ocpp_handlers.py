@@ -8,6 +8,7 @@ from ocpp.v16.enums import (
     RegistrationStatus,
     Action,
     RemoteStartStopStatus,
+    DataTransferStatus,
 )
 
 class EVSEChargePoint(CP):
