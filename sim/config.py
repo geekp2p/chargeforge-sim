@@ -1,6 +1,11 @@
 import os
 
 CSMS_URL = os.getenv("CSMS_URL", "ws://127.0.0.1:9000/ocpp")
+# TLS certificate configuration (optional)
+TLS_CA_CERT = os.getenv("TLS_CA_CERT")
+TLS_CLIENT_CERT = os.getenv("TLS_CLIENT_CERT")
+TLS_CLIENT_KEY = os.getenv("TLS_CLIENT_KEY")
+
 CPID = os.getenv("CPID", "TestCP01")
 CONNECTORS = int(os.getenv("CONNECTORS", "1"))
 

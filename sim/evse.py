@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import datetime, timezone
 import random
+import ssl
 
 import uvicorn
 from fastapi import FastAPI
@@ -90,10 +91,15 @@ async def ocpp_client():
     global cp
     cpid = CPID
     url = f"{CSMS_URL}/{cpid}"
+    ssl_context = None
+    if CSMS_URL.startswith("wss://"):
+        ssl_context = ssl.create_default_context(cafile=TLS_CA_CERT) if TLS_CA_CERT else ssl.create_default_context()
+        if TLS_CLIENT_CERT and TLS_CLIENT_KEY:
+            ssl_context.load_cert_chain(TLS_CLIENT_CERT, TLS_CLIENT_KEY)
     while True:
         try:
             logging.info(f"Connecting to CSMS: {url}")
-            async with websockets.connect(url, subprotocols=['ocpp1.6']) as ws:
+            async with websockets.connect(url, subprotocols=['ocpp1.6'], ssl=ssl_context) as ws:
                 transport = WebSocketTransport(ws)
                 cp = EVSEChargePoint(
                     cpid, transport, model,
