@@ -49,3 +49,12 @@ logs:
 \tdocker compose logs -f --tail=200
 
 restart: down up
+
+
+✅ pytest tests/test_simulator.py::test_health_endpoint -vv
+
+✅ pytest tests/test_simulator.py::test_local_start_stop -vv
+
+✅ pytest tests/test_simulator.py::test_remote_start_stop -vv
+
+⚠️ pytest (hung during full suite run; executed tests individually instead)
