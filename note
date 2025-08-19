@@ -1,0 +1,51 @@
+chargeforge-sim/
+├─ sim/
+│  ├─ evse.py                 # main: EVSE emulator (OCPP 1.6J) + state machine + HTTP control
+│  ├─ state_machine.py        # สถานะ EVSE & helper
+│  ├─ ocpp_handlers.py        # OCPP handlers (Boot/Status/Meter/Start/Stop/DataTransfer)
+│  ├─ config.py               # อ่าน ENV/ค่าเริ่มต้น
+│  └─ requirements.txt        # ocpp, websockets, fastapi, uvicorn ฯลฯ
+├─ docker/
+│  └─ Dockerfile              # อิมเมจ Python 3.11-slim + deps
+├─ compose.yaml               # docker compose สำหรับรัน simulator
+├─ .env.example               # ตัวอย่างค่า ENV (แก้ชื่อ host/CPID ได้)
+├─ Makefile                   # คำสั่ง build/run/stop/logs เร็ว ๆ
+└─ README.md                  # คู่มือสั้น ๆ
+
+
+make build
+make up
+# หรือไม่ใช้ make:
+# docker compose build && docker compose up -d
+
+
+make logs
+
+
+# เสียบหัว
+curl -X POST http://localhost:7071/plug/1
+
+# เริ่มชาร์จ (local) ใช้ค่า idTag=LOCAL_TAG
+curl -X POST "http://localhost:7071/local_start/1?id_tag=TAG_123"
+
+# หยุดชาร์จ
+curl -X POST http://localhost:7071/local_stop/1
+
+# ดึงหัวออก
+curl -X POST http://localhost:7071/unplug/1
+
+.PHONY: build up down logs restart
+
+build:
+\tdocker compose build
+
+up:
+\tdocker compose up -d
+
+down:
+\tdocker compose down
+
+logs:
+\tdocker compose logs -f --tail=200
+
+restart: down up

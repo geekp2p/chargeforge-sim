@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  chargeforge-sim:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: chargeforge-sim
+    env_file:
+      - .env
+    ports:
+      - "7071:7071"   # HTTP control endpoints (simulate plug/unplug, start/stop)
+    restart: unless-stopped
