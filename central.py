@@ -261,33 +261,25 @@ class CentralSystem(ChargePoint):
             )
 
         # ถ้ามี remote start pending ให้ลบ flag ทิ้ง
+        pending = self.pending_start.pop(int(connector_id), None)
         self.pending_remote.pop(int(connector_id), None)
-        pending = self.pending_start.get(int(connector_id))
-        if not pending:
-            logging.warning(
-                f"StartTransaction for connector {connector_id} received without pending remote start; rejecting"
-            )
-            await self.unlock_connector(int(connector_id))
-            return call_result.StartTransactionPayload(
-                transaction_id=0,
-                id_tag_info={"status": AuthorizationStatus.rejected},
-            )
 
-        # มี pending remote start -> pop แล้วสร้าง transaction
-        self.pending_start.pop(int(connector_id), None)
+        # ไม่บังคับว่าต้องมี pending start เสมอ: รองรับ local start หรือ remote start ที่ไม่ได้ผ่าน API
         tx_id = next(_tx_counter)  # CSMS ออกเลข transactionId
-        # เก็บทั้ง transactionId และ idTag เพื่อให้ API ภายนอกเรียกดูได้
-        self.active_tx[int(connector_id)] = {
+        info = {
             "transaction_id": tx_id,
             "id_tag": id_tag,
-            "vid": pending.get("vid"),
         }
+        if pending and "vid" in pending:
+            info["vid"] = pending["vid"]
+        # เก็บทั้ง transactionId และข้อมูลอื่นเพื่อให้ API ภายนอกเรียกดูได้
+        self.active_tx[int(connector_id)] = info
         # ยกเลิก watchdog ถ้ามี
         task = self.no_session_tasks.pop(int(connector_id), None)
         if task:
             task.cancel()
         logging.info(
-            f"← StartTransaction from {self.id}: connector={connector_id}, idTag={id_tag}, meterStart={meter_start}, vid={pending.get('vid')}"
+            f"← StartTransaction from {self.id}: connector={connector_id}, idTag={id_tag}, meterStart={meter_start}, vid={info.get('vid')}"
         )
         logging.info(f"→ Assign transactionId={tx_id}")
         return call_result.StartTransactionPayload(

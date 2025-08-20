@@ -1,0 +1,12 @@
+name: ocpp-all
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - ocpp==0.26.0
+      - websockets
+      - fastapi
+      - uvicorn[standard]
+      - requests

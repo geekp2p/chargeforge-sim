@@ -92,3 +92,21 @@ docker compose down -v
 docker image prune -af
 docker compose --env-file .env up --build --no-cache -d
 docker compose down -v && docker compose build --no-cache && docker compose --env-file .env up -d
+
+
+# CLI เท่านั้น
+conda create -n ocpp-cli -y python=3.11 pip
+conda activate ocpp-cli
+pip install requests
+
+# CSMS เท่านั้น
+conda create -n ocpp-csms -y python=3.11 pip
+conda activate ocpp-csms
+pip install "ocpp==0.26.0" websockets fastapi "uvicorn[standard]"
+
+
+# เริ่มชาร์จ
+python start_stop.py start Gresgying02 1 DEMO_IDTAG
+
+# หยุดชาร์จ (ระบุ connector เพื่อหา transaction อัตโนมัติ)
+python start_stop.py stop Gresgying02 1 DEMO_IDTAG
