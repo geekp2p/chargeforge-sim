@@ -9,7 +9,7 @@ async def test_boot_notification_sent(simulator):
     csms_cp = simulator["csms"].cp
     bn = await asyncio.wait_for(csms_cp.boot_notifications.get(), timeout=5)
     assert bn["charge_point_model"] == "F3-EU180-CC"
-    assert bn["charge_point_vendor"] == "Gresgying-Simulation"
+    assert bn["charge_point_vendor"] == "Gresgying"
 
 
 @pytest.mark.asyncio

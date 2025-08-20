@@ -118,7 +118,7 @@ class EVSEChargePoint(CP):
             {"key": "TransactionMessageRetryInterval", "readonly": False, "value": "60"},
             {"key": "UnlockConnectorOnEVSideDisconnect", "readonly": False, "value": "true"},
             {"key": "MaxEnergyOnInvalidId", "readonly": False, "value": "10"},
-            {"key": "VendorInfo", "readonly": True, "value": "Gresgying-Simulation"},
+            {"key": "VendorInfo", "readonly": True, "value": "Gresgying"},
             {"key": "WebSocketPingInterval", "readonly": False, "value": "10"},
             {"key": "ChargeProfileMaxStackLevel", "readonly": True, "value": "20"},
             {"key": "ChargingScheduleAllowedChargingRateUnit", "readonly": True, "value": "Current,Power"},
