@@ -79,6 +79,13 @@ Instructions for running the reference `central.py` server from [geekp2p/ocpp](h
    python central.py
    ```
    The server listens on `ws://0.0.0.0:9000/ocpp/<ChargePointID>` and exposes an HTTP API on `http://0.0.0.0:8080`.
+   An interactive console accepts commands such as:
+
+   ```
+   config <cpid> AuthorizeRemoteTxRequests true  # allow remote start without prior Authorize
+   start <cpid> <connector> <idTag>
+   stop  <cpid> <connector|txId>
+   ```
 
 ## 2. Test with ChargeForge Simulator
 1. Install simulator deps:

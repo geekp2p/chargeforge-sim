@@ -115,6 +115,14 @@ class CentralSystem(ChargePoint):
         else:
             logging.warning(f"RemoteStopTransaction rejected: {status}")
 
+    async def change_configuration(self, key: str, value: str):
+        """ส่งคำสั่ง ChangeConfiguration ไปยัง charger"""
+        req = call.ChangeConfigurationPayload(key=key, value=value)
+        logging.info(f"→ ChangeConfiguration to {self.id} ({key}={value})")
+        resp = await self.call(req)
+        logging.info(f"← ChangeConfiguration.conf: {resp}")
+        return getattr(resp, "status", None)
+
     async def unlock_connector(self, connector_id: int):
         """ส่งคำสั่ง UnlockConnector ไปยัง charger"""
         req = call.UnlockConnectorPayload(connector_id=connector_id)
@@ -604,6 +612,7 @@ async def main():
         คำสั่ง:
           start <cpid> <connector> <idTag>
           stop  <cpid> <connector|txId>
+          config <cpid> <key> <value>
           ls
           map <cpid>
         """
@@ -624,6 +633,14 @@ async def main():
                     print("No such CP")
                 else:
                     print(f"{parts[1]} active_tx:", cp.active_tx)
+                continue
+            if parts[0] == "config" and len(parts) >= 4:
+                cpid, key, value = parts[1], parts[2], " ".join(parts[3:])
+                cp = connected_cps.get(cpid)
+                if not cp:
+                    print("No such CP")
+                    continue
+                asyncio.run_coroutine_threadsafe(cp.change_configuration(key, value), loop)
                 continue
             if parts[0] == "start" and len(parts) >= 4:
                 cpid, connector, idtag = parts[1], int(parts[2]), " ".join(parts[3:])
