@@ -96,12 +96,12 @@ Instructions for running the reference `central.py` server from [geekp2p/ocpp](h
    ```bash
    python sim/evse.py
    ```
-3. Use the CSMS HTTP API to control charging:␊
-   ```bash␊
-   curl -X POST -H 'Content-Type: application/json' \␊
+3. Use the CSMS HTTP API to control charging:
+   ```bash
+   curl -X POST -H 'Content-Type: application/json' \
      -d '{"cpid":"TestCP01","connectorId":1,"id_tag":"MY_TAG"}' \
-     http://localhost:8080/api/v1/start␊
-   ```␊
+     http://localhost:8080/api/v1/start
+   ```
    Provide `id_tag` (or `idTag`) to start the session with a custom idTag. If omitted, a default tag is used. Use `/api/v1/stop` or `/api/v1/active` in a similar way. The simulator will report MeterValues and status updates.
 
 ## 3. Connecting a real Gresgying charger
