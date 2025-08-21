@@ -105,6 +105,9 @@ conda activate ocpp-csms
 pip install "ocpp==0.26.0" websockets fastapi "uvicorn[standard]"
 
 
+docker compose --env-file .env build --no-cache
+docker compose --env-file .env up
+
 # เริ่มชาร์จ
 python start_stop.py start Gresgying02 1 DEMO_IDTAG
 

@@ -12,6 +12,7 @@ from ocpp.v16.enums import (
     UnlockStatus,
 )
 from .state_machine import EVSEState
+from .config import CONNECTORS
 
 class EVSEChargePoint(CP):
     def __init__(self, id, connection, model, send_status_cb, start_cb, stop_cb):
@@ -26,7 +27,15 @@ class EVSEChargePoint(CP):
     @on(Action.RemoteStartTransaction)
     async def on_remote_start(self, id_tag, connector_id=None, **kwargs):
         cid = int(connector_id or 1)
-        c = self.model.get(cid)
+        try:
+            c = self.model.get(cid)
+        except KeyError:
+            logging.warning(
+                f"RemoteStartTransaction rejected: connector {cid} does not exist"
+            )
+            return call_result.RemoteStartTransactionPayload(
+                status=RemoteStartStopStatus.rejected
+            )
         # reject when not plugged or already charging
         if not c.plugged or c.session_active:
             return call_result.RemoteStartTransactionPayload(
@@ -52,7 +61,13 @@ class EVSEChargePoint(CP):
     @on(Action.UnlockConnector)
     async def on_unlock_connector(self, connector_id, **kwargs):
         cid = int(connector_id or 1)
-        c = self.model.get(cid)
+        try:
+            c = self.model.get(cid)
+        except KeyError:
+            logging.info(
+                f"UnlockConnector rejected: connector {cid} does not exist"
+            )
+            return call_result.UnlockConnectorPayload(status=UnlockStatus.unlock_failed)
         if c.session_active:
             logging.info(f"UnlockConnector rejected: connector {cid} is in session")
             return call_result.UnlockConnectorPayload(status=UnlockStatus.unlock_failed)
@@ -115,7 +130,7 @@ class EVSEChargePoint(CP):
             {"key": "MeterValuesSampledData", "readonly": False, "value": "Energy.Active.Import.Register,Current.Import,Voltage,Power.Active.Import,SoC,Temperature,Power.Offered"},
             {"key": "MeterValuesSampledDataMaxLength", "readonly": True, "value": "7"},
             {"key": "MeterValueSampleInterval", "readonly": False, "value": "60"},
-            {"key": "NumberOfConnectors", "readonly": True, "value": "2"},
+            {"key": "NumberOfConnectors", "readonly": True, "value": str(CONNECTORS)},
             {"key": "ReserveConnectorZeroSupported", "readonly": True, "value": "false"},
             {"key": "ResetRetries", "readonly": False, "value": "120"},
             {"key": "ConnectorPhaseRotation", "readonly": False, "value": "NotApplicable"},
