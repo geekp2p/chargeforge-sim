@@ -110,3 +110,12 @@ Instructions for running the reference `central.py` server from [geekp2p/ocpp](h
 3. Monitor logs from `central.py` for BootNotification, StatusNotification, StartTransaction and StopTransaction events.
 
 This setup has been validated with a Gresgying 120 kW–180 kW DC charging station using OCPP 1.6J over WebSocket.
+
+# ตัวอย่างการใช้งาน
+
+curl -H "X-API-Key: changeme-123" http://45.136.236.186:8080/api/v1/active
+
+curl -X POST http://45.136.236.186:8080/api/v1/stop -H "Content-Type: application/json" -H "X-API-Key: changeme-123" -d "{\"cpid\":\"Gresgying01\",\"transactionId\":1}"
+
+
+curl -X POST http://45.136.236.186:8080/api/v1/start -H "Content-Type: application/json" -H "X-API-Key: changeme-123" -d "{\"cpid\":\"Gresgying01\",\"connectorId\":2,\"id_tag\":\"VID:FCA47A147858\"}"
