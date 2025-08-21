@@ -389,7 +389,7 @@ async def api_start(req: StartReq):
     if not cp:
         raise HTTPException(status_code=404, detail=f"ChargePoint '{req.cpid}' not connected")
     try:
-        id_tag = req.idTag or DEFAULT_ID_TAG
+        id_tag = req.id_tag or req.idTag or DEFAULT_ID_TAG
         cp.pending_start[int(req.connectorId)] = {"id_tag": id_tag}
         status = await cp.remote_start(req.connectorId, id_tag)
         if status != RemoteStartStopStatus.accepted:

@@ -28,19 +28,19 @@ Instructions for running the reference `central.py` server from [geekp2p/ocpp](h
 
    **Unix/macOS**:
    ```bash
-   curl -X POST -H 'Content-Type: application/json' \
-     -d '{"cpid":"TestCP01","connectorId":1}' \
-     http://localhost:8080/api/v1/start
+   curl -X POST -H 'Content-Type: application/json' \␊
+     -d '{"cpid":"TestCP01","connectorId":1,"id_tag":"MY_TAG"}' \
+     http://localhost:8080/api/v1/start␊
    ```
 
    **Windows CMD**:
    ```cmd
-   curl -X POST -H "Content-Type: application/json" -d "{\"cpid\":\"TestCP01\",\"connectorId\":1}" http://localhost:8080/api/v1/start
+   curl -X POST -H "Content-Type: application/json" -d "{\"cpid\":\"TestCP01\",\"connectorId\":1,\"id_tag\":\"MY_TAG\"}" http://localhost:8080/api/v1/start
    ```
 
    **Windows PowerShell**:
    ```powershell
-   curl -X POST -H "Content-Type: application/json" -d '{"cpid":"TestCP01","connectorId":1}' http://localhost:8080/api/v1/start
+   curl -X POST -H "Content-Type: application/json" -d '{"cpid":"TestCP01","connectorId":1,"id_tag":"MY_TAG"}' http://localhost:8080/api/v1/start
    ```
 
    Use `/api/v1/stop` in the same way (replace the final path) to stop charging. The simulator will report MeterValues and status updates.
