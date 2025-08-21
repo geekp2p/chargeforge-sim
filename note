@@ -110,3 +110,10 @@ python start_stop.py start Gresgying02 1 DEMO_IDTAG
 
 # หยุดชาร์จ (ระบุ connector เพื่อหา transaction อัตโนมัติ)
 python start_stop.py stop Gresgying02 1 DEMO_IDTAG
+
+
+Y:\emulator\central>curl -X POST http://localhost:7071/plug/1
+
+curl -X POST -H "Content-Type: application/json" -d "{\"cpid\":\"Gresgying02\",\"connectorId\":1}" http://localhost:8080/api/v1/stop
+
+curl -X POST -H "Content-Type: application/json" -d "{\"cpid\":\"Gresgying02\",\"connectorId\":1}" http://localhost:8080/api/v1/start

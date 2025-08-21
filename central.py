@@ -20,7 +20,7 @@ from ocpp.v16.enums import (
 )
 
 # --- เพิ่ม import สำหรับ HTTP API ---
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Header
 from pydantic import BaseModel
 import uvicorn
 
@@ -321,6 +321,7 @@ class CentralSystem(ChargePoint):
 #        HTTP CONTROL API
 # ================================
 DEFAULT_ID_TAG = "DEMO_IDTAG"
+API_KEY = "changeme-123"  # replace with your own secret
 
 app = FastAPI(title="OCPP Central Control API", version="1.0.0")
 
@@ -377,29 +378,10 @@ class ActiveSession(BaseModel):
     idTag: str
     transactionId: int
 
-class StartReq(BaseModel):
-    cpid: str
-    connectorId: int
-    idTag: str | None = None
 
-class StopReq(BaseModel):
-    cpid: str
-    connectorId: int | None = None
-    transactionId: int | None = None
-
-class StopByConnectorReq(BaseModel):
-    cpid: str
-    connectorId: int
-
-class ReleaseReq(BaseModel):
-    cpid: str
-    connectorId: int
-
-class ActiveSession(BaseModel):
-    cpid: str
-    connectorId: int
-    idTag: str
-    transactionId: int
+def require_key(x_api_key: str | None):
+    if API_KEY and x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="invalid api key")
 
 @app.post("/api/v1/start")
 async def api_start(req: StartReq):
@@ -442,8 +424,7 @@ async def api_stop(req: StopReq):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/charge/stop")
-async def api_stop_by_connector(req: StopByConnectorReq, x_api_key: str | None = Header(default=None, alias="X-API-Key")):
-    require_key(x_api_key)
+async def api_stop_by_connector(req: StopByConnectorReq):
     cp = connected_cps.get(req.cpid)
     if not cp:
         raise HTTPException(status_code=404, detail=f"ChargePoint '{req.cpid}' not connected")
@@ -452,7 +433,9 @@ async def api_stop_by_connector(req: StopByConnectorReq, x_api_key: str | None =
         raise HTTPException(status_code=404, detail="No active transaction for this connector")
     tx_id = session["transaction_id"]
     try:
-        await cp.remote_stop(tx_id)
+        status = await cp.remote_stop(tx_id)
+        if status != RemoteStartStopStatus.accepted:
+            raise HTTPException(status_code=409, detail=f"RemoteStop rejected: {status}")
         return {"ok": True, "transactionId": tx_id, "message": "RemoteStopTransaction sent"}
     except HTTPException:
         raise
@@ -461,9 +444,8 @@ async def api_stop_by_connector(req: StopByConnectorReq, x_api_key: str | None =
 
 
 @app.post("/api/v1/release")
-async def api_release(req: ReleaseReq, x_api_key: str | None = Header(default=None, alias="X-API-Key")):
+async def api_release(req: ReleaseReq):
     """ปลดล็อกสายเมื่อยังไม่มีธุรกรรม"""
-    require_key(x_api_key)
     cp = connected_cps.get(req.cpid)
     if not cp:
         raise HTTPException(status_code=404, detail=f"ChargePoint '{req.cpid}' not connected")
@@ -484,9 +466,8 @@ async def api_release(req: ReleaseReq, x_api_key: str | None = Header(default=No
 
 
 @app.get("/api/v1/active")
-async def api_active_sessions(x_api_key: str | None = Header(default=None, alias="X-API-Key")):
+async def api_active_sessions():
     """คืนรายการธุรกรรมที่กำลังชาร์จอยู่ทั้งหมด."""
-    require_key(x_api_key)
     sessions: list[ActiveSession] = []
     for cpid, cp in connected_cps.items():
         for conn_id, info in cp.active_tx.items():

@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from ocpp.v16.enums import RemoteStartStopStatus
+from ocpp.v16.enums import RemoteStartStopStatus, UnlockStatus
 
 
 @pytest.mark.asyncio
@@ -63,3 +63,15 @@ async def test_remote_start_stop(simulator):
     assert res.status == RemoteStartStopStatus.accepted
     stop = await asyncio.wait_for(csms_cp.stop_requests.get(), timeout=5)
     assert int(stop["transaction_id"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_remote_unlock(simulator):
+    client = simulator["client"]
+    csms_cp = simulator["csms"].cp
+
+    resp = await client.post("/plug/1")
+    assert resp.json()["ok"] is True
+
+    res = await csms_cp.unlock_connector(connector_id=1)
+    assert res.status == UnlockStatus.unlocked

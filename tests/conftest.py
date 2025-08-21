@@ -77,6 +77,10 @@ class MockCSMS(CP):
         req = call.RemoteStopTransactionPayload(transaction_id=transaction_id)
         return await self.call(req)
 
+    async def unlock_connector(self, *, connector_id: int):
+        req = call.UnlockConnectorPayload(connector_id=connector_id)
+        return await self.call(req)
+
 
 class CSMS:
     """WebSocket server that accepts EVSE connections and exposes MockCSMS."""

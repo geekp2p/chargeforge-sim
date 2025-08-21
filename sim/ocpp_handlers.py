@@ -9,7 +9,17 @@ from ocpp.v16.enums import (
     Action,
     RemoteStartStopStatus,
     DataTransferStatus,
+    UnlockStatus,
 )
+from .state_machine import EVSEStatefrom ocpp.v16.enums import (
+    AuthorizationStatus,
+    RegistrationStatus,
+    Action,
+    RemoteStartStopStatus,
+    DataTransferStatus,
+    UnlockStatus,
+)
+from .state_machine import EVSEState
 
 class EVSEChargePoint(CP):
     def __init__(self, id, connection, model, send_status_cb, start_cb, stop_cb):
@@ -46,6 +56,19 @@ class EVSEChargePoint(CP):
         return call_result.RemoteStopTransactionPayload(
             status=RemoteStartStopStatus.accepted
         )
+
+    @on(Action.UnlockConnector)
+    async def on_unlock_connector(self, connector_id, **kwargs):
+        cid = int(connector_id or 1)
+        c = self.model.get(cid)
+        if c.session_active:
+            logging.info(f"UnlockConnector rejected: connector {cid} is in session")
+            return call_result.UnlockConnectorPayload(status=UnlockStatus.unlock_failed)
+        c.plugged = False
+        c.state = EVSEState.AVAILABLE
+        asyncio.create_task(self.send_status(cid))
+        logging.info(f"Connector {cid} unlocked")
+        return call_result.UnlockConnectorPayload(status=UnlockStatus.unlocked)
 
     # ====== EVSE -> CSMS handlers ======
     @on(Action.BootNotification)
