@@ -410,7 +410,13 @@ async def api_stop(req: StopReq):
         raise HTTPException(status_code=404, detail=f"ChargePoint '{req.cpid}' not connected")
     try:
         tx_id = req.transactionId
-        if tx_id is None and req.connectorId is not None:
+        if tx_id is not None:
+            if not any(
+                session.get("transaction_id") == tx_id
+                for session in cp.active_tx.values()
+            ):
+                raise HTTPException(status_code=404, detail="No matching active transaction")
+        elif req.connectorId is not None:
             session = cp.active_tx.get(req.connectorId)
             if session:
                 tx_id = session.get("transaction_id")
