@@ -16,7 +16,7 @@ hardware.
 - Reconnect/backoff logic when the CSMS connection drops
 - Basic state machine: Available → Preparing → Charging → Finishing → Available
 - Periodic MeterValues with Wh increasing by a fixed rate
-- HTTP control endpoints: `/plug/{cid}`, `/unplug/{cid}`, `/local_start/{cid}`, `/local_stop/{cid}`
+- HTTP control endpoints: `/plug/{cid}`, `/unplug/{cid}`, `/local_start/{cid}`, `/local_stop/{cid}`. To simulate AutoCharge, `/plug/{cid}?auto_start=true&id_tag=TAG` immediately begins a session with the provided `id_tag`.
 - Uses the `ocpp` Python package with `subprotocols=['ocpp1.6']` for JSON over WebSocket
 
 ## 📋 Roadmap / Next Tasks
@@ -119,3 +119,20 @@ curl -X POST http://45.136.236.186:8080/api/v1/stop -H "Content-Type: applicatio
 
 
 curl -X POST http://45.136.236.186:8080/api/v1/start -H "Content-Type: application/json" -H "X-API-Key: changeme-123" -d "{\"cpid\":\"Gresgying01\",\"connectorId\":2,\"id_tag\":\"VID:FCA47A147858\"}"
+
+# จำลองการเสียบรถเข้าที่หัวชาร์จหมายเลข 1
+curl -X POST http://localhost:7071/plug/1
+
+# ถ้าต้องการถอด
+curl -X POST http://localhost:7071/unplug/1
+
+curl -X POST http://localhost:8080/api/v1/start \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: changeme-123" \
+  -d '{"cpid":"Gresgying02","connectorId":1,"id_tag":"VID:FCA47A147858"}'
+
+
+curl -X POST http://localhost:8080/api/v1/stop \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: changeme-123" \
+  -d '{"cpid":"Gresgying02","transactionId":1}'

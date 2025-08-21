@@ -25,6 +25,9 @@ make logs
 # เสียบหัว
 curl -X POST http://localhost:7071/plug/1
 
+# เสียบและเริ่มชาร์จทันที (auto start)
+curl -X POST "http://localhost:7071/plug/1?auto_start=true&id_tag=AUTO123"
+
 # เริ่มชาร์จ (local) ใช้ค่า idTag=LOCAL_TAG
 curl -X POST "http://localhost:7071/local_start/1?id_tag=TAG_123"
 

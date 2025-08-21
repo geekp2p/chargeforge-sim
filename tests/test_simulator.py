@@ -75,3 +75,21 @@ async def test_remote_unlock(simulator):
 
     res = await csms_cp.unlock_connector(connector_id=1)
     assert res.status == UnlockStatus.unlocked
+
+
+@pytest.mark.asyncio
+async def test_plug_auto_start(simulator):
+    client = simulator["client"]
+    csms = simulator["csms"].cp
+
+    resp = await client.post("/plug/1?auto_start=true&id_tag=AUTO123")
+    assert resp.json()["ok"] is True
+
+    start = await asyncio.wait_for(csms.start_requests.get(), timeout=5)
+    assert start["connector_id"] == 1
+    assert start["id_tag"] == "AUTO123"
+
+    resp = await client.post("/local_stop/1")
+    assert resp.json()["ok"] is True
+    stop = await asyncio.wait_for(csms.stop_requests.get(), timeout=5)
+    assert int(stop["transaction_id"]) == 1
