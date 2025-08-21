@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"io"
 	"net"
@@ -14,7 +13,6 @@ import (
 
 const (
 	apiBase      = "http://45.136.236.186:8080"
-	apiKey       = "changeme-123"
 	defaultIdTag = "DEMO_IDTAG"
 )
 
@@ -39,7 +37,6 @@ func doJSON(method, url, body string) (int, []byte, error) {
 		return 0, nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", apiKey)
 	req.Header.Set("Connection", "close") // ปิดหลังจบ (ซ้ำกับ DisableKeepAlives)
 
 	resp, err := httpClient.Do(req)
@@ -54,49 +51,16 @@ func doJSON(method, url, body string) (int, []byte, error) {
 	return resp.StatusCode, b, nil
 }
 
-func computeHash(cpid string, connectorId int, idTag, txId, ts string) string {
-	canonical := fmt.Sprintf("%s|%d|%s|%s|%s|-|-", cpid, connectorId, idTag, txId, ts)
-	sum := sha256.Sum256([]byte(canonical))
-	return fmt.Sprintf("%x", sum)
-}
-
-func startCharge(cpid string, connectorId int, idTag string, txId *int) error {
+func startCharge(cpid string, connectorId int, idTag string) error {
 	url := fmt.Sprintf("%s/api/v1/start", apiBase)
-	ts := time.Now().UTC().Format(time.RFC3339)
-	txStr := "-"
-	if txId != nil {
-		txStr = strconv.Itoa(*txId)
-	}
-	hash := computeHash(cpid, connectorId, idTag, txStr, ts)
-	jsonBody := fmt.Sprintf(`{"cpid":"%s","connectorId":%d,"idTag":"%s","timestamp":"%s","hash":"%s"`, cpid, connectorId, idTag, ts, hash)
-	if txId != nil {
-		jsonBody += fmt.Sprintf(`,"transactionId":%d`, *txId)
-	}
-	jsonBody += "}"
+	jsonBody := fmt.Sprintf(`{"cpid":"%s","connectorId":%d,"idTag":"%s"}`, cpid, connectorId, idTag)
 	_, _, err := doJSON("POST", url, jsonBody)
 	return err
 }
 
-func stopCharge(cpid string, connectorId int, idTag *string, txId *int) error {
+func stopCharge(cpid string, connectorId int) error {
 	url := fmt.Sprintf("%s/api/v1/stop", apiBase)
-	ts := time.Now().UTC().Format(time.RFC3339)
-	id := "-"
-	if idTag != nil {
-		id = *idTag
-	}
-	txStr := "-"
-	if txId != nil {
-		txStr = strconv.Itoa(*txId)
-	}
-	hash := computeHash(cpid, connectorId, id, txStr, ts)
-	jsonBody := fmt.Sprintf(`{"cpid":"%s","connectorId":%d,"timestamp":"%s","hash":"%s"`, cpid, connectorId, ts, hash)
-	if idTag != nil {
-		jsonBody += fmt.Sprintf(`,"idTag":"%s"`, *idTag)
-	}
-	if txId != nil {
-		jsonBody += fmt.Sprintf(`,"transactionId":%d`, *txId)
-	}
-	jsonBody += "}"
+	jsonBody := fmt.Sprintf(`{"cpid":"%s","connectorId":%d}`, cpid, connectorId)
 	status, _, err := doJSON("POST", url, jsonBody)
 	if err != nil {
 		return err
@@ -112,9 +76,8 @@ func stopCharge(cpid string, connectorId int, idTag *string, txId *int) error {
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Println("usage:")
-		fmt.Println("  go run start_stop.go start <cpid> <connectorId> [idTag] [transactionId]")
-		fmt.Println("  go run start_stop.go stop  <cpid> <connectorId> [idTag] [transactionId]")
-		fmt.Println("      If idTag/transactionId are omitted, defaults are used and /charge/stop may be called")
+		fmt.Println("  go run start_stop.go start <cpid> <connectorId> [idTag]")
+		fmt.Println("  go run start_stop.go stop  <cpid> <connectorId>")
 		return
 	}
 
@@ -123,7 +86,7 @@ func main() {
 	switch cmd {
 	case "start":
 		if len(os.Args) < 4 {
-			fmt.Println("usage: go run start_stop.go start <cpid> <connectorId> [idTag] [transactionId]")
+			fmt.Println("usage: go run start_stop.go start <cpid> <connectorId> [idTag]")
 			return
 		}
 		cpid := os.Args[2]
@@ -133,25 +96,15 @@ func main() {
 			return
 		}
 		idTag := defaultIdTag
-		var txId *int
 		if len(os.Args) >= 5 {
 			idTag = os.Args[4]
 		}
-		if len(os.Args) >= 6 {
-			t, err := strconv.Atoi(os.Args[5])
-			if err != nil {
-				fmt.Println("Invalid transactionId:", err)
-				return
-			}
-			txId = &t
-		}
-		if err := startCharge(cpid, connectorId, idTag, txId); err != nil {
+		if err := startCharge(cpid, connectorId, idTag); err != nil {
 			fmt.Println("Error starting charge:", err)
 		}
 	case "stop":
 		if len(os.Args) < 4 {
-			fmt.Println("usage: go run start_stop.go stop <cpid> <connectorId> [idTag] [transactionId]")
-			fmt.Println("       omit idTag/transactionId to call /charge/stop")
+			fmt.Println("usage: go run start_stop.go stop <cpid> <connectorId>")
 			return
 		}
 		cpid := os.Args[2]
@@ -160,27 +113,13 @@ func main() {
 			fmt.Println("Invalid connectorId:", err)
 			return
 		}
-		var idTag *string
-		var txId *int
-		if len(os.Args) >= 5 {
-			s := os.Args[4]
-			idTag = &s
-		}
-		if len(os.Args) >= 6 {
-			t, err := strconv.Atoi(os.Args[5])
-			if err != nil {
-				fmt.Println("Invalid transactionId:", err)
-				return
-			}
-			txId = &t
-		}
-		if err := stopCharge(cpid, connectorId, idTag, txId); err != nil {
+		if err := stopCharge(cpid, connectorId); err != nil {
 			fmt.Println("Error stopping charge:", err)
 		}
 	default:
 		fmt.Println("unknown cmd:", cmd)
 		fmt.Println("usage:")
-		fmt.Println("  go run start_stop.go start <cpid> <connectorId> [idTag] [transactionId]")
-		fmt.Println("  go run start_stop.go stop  <cpid> <connectorId> [idTag] [transactionId]")
+		fmt.Println("  go run start_stop.go start <cpid> <connectorId> [idTag]")
+		fmt.Println("  go run start_stop.go stop  <cpid> <connectorId>")
 	}
 }

@@ -78,14 +78,14 @@ Instructions for running the reference `central.py` server from [geekp2p/ocpp](h
    ```bash
    python central.py
    ```
-   The server listens on `ws://0.0.0.0:9000/ocpp/<ChargePointID>` and exposes an HTTP API on `http://0.0.0.0:8080`.
-   An interactive console accepts commands such as:
+  The server listens on `ws://0.0.0.0:9000/ocpp/<ChargePointID>` and exposes an HTTP API on `http://0.0.0.0:8080`.
+  An interactive console accepts commands such as:
 
    ```
-   config <cpid> AuthorizeRemoteTxRequests true  # allow remote start without prior Authorize
-   start <cpid> <connector> <idTag>
-   stop  <cpid> <connector|txId>
-   ```
+   start <cpid> <connector> [idTag]
+  stop  <cpid> <connector>
+  ```
+   The CSMS auto-enables `AuthorizeRemoteTxRequests` so no manual configuration is required before issuing a remote start.
 
 ## 2. Test with ChargeForge Simulator
 1. Install simulator deps:
@@ -98,8 +98,7 @@ Instructions for running the reference `central.py` server from [geekp2p/ocpp](h
    ```
 3. Use the CSMS HTTP API to control charging:
    ```bash
-   curl -X POST -H 'X-API-Key: changeme-123' \
-     -H 'Content-Type: application/json' \
+   curl -X POST -H 'Content-Type: application/json' \
      -d '{"cpid":"TestCP01","connectorId":1}' \
      http://localhost:8080/api/v1/start
    ```
@@ -107,7 +106,7 @@ Instructions for running the reference `central.py` server from [geekp2p/ocpp](h
 
 ## 3. Connecting a real Gresgying charger
 1. Configure the charger to use WebSocket URL `ws://<csms-host>:9000/ocpp/<ChargePointID>` with OCPP 1.6J.
-2. If the charger supports remote operations, invoke `/api/v1/start` and `/api/v1/stop` as above. Default API key: `changeme-123` (change it in `central.py`).
+2. If the charger supports remote operations, invoke `/api/v1/start` and `/api/v1/stop` as above.
 3. Monitor logs from `central.py` for BootNotification, StatusNotification, StartTransaction and StopTransaction events.
 
 This setup has been validated with a Gresgying 120 kW–180 kW DC charging station using OCPP 1.6J over WebSocket.
