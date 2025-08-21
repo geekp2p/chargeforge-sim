@@ -11,14 +11,6 @@ from ocpp.v16.enums import (
     DataTransferStatus,
     UnlockStatus,
 )
-from .state_machine import EVSEStatefrom ocpp.v16.enums import (
-    AuthorizationStatus,
-    RegistrationStatus,
-    Action,
-    RemoteStartStopStatus,
-    DataTransferStatus,
-    UnlockStatus,
-)
 from .state_machine import EVSEState
 
 class EVSEChargePoint(CP):

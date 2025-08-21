@@ -21,7 +21,7 @@ from ocpp.v16.enums import (
 
 # --- เพิ่ม import สำหรับ HTTP API ---
 from fastapi import FastAPI, HTTPException, Request, Header
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 import uvicorn
 
 logging.basicConfig(level=logging.INFO)
@@ -345,13 +345,15 @@ def health():
 class StartReq(BaseModel):
     cpid: str
     connectorId: int
-    idTag: str | None = None
+    id_tag: str | None = Field(default=None, alias="idTag")
     transactionId: int | None = None
     timestamp: str | None = None
     vid: str | None = None
     kv: str | None = None
     kvMap: Dict[str, str] | None = None
     hash: str | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
 
 class StopReq(BaseModel):
     cpid: str
@@ -389,7 +391,7 @@ async def api_start(req: StartReq):
     if not cp:
         raise HTTPException(status_code=404, detail=f"ChargePoint '{req.cpid}' not connected")
     try:
-        id_tag = req.id_tag or req.idTag or DEFAULT_ID_TAG
+        id_tag = req.id_tag or DEFAULT_ID_TAG
         cp.pending_start[int(req.connectorId)] = {"id_tag": id_tag}
         status = await cp.remote_start(req.connectorId, id_tag)
         if status != RemoteStartStopStatus.accepted:
