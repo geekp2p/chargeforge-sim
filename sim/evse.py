@@ -251,11 +251,13 @@ async def send_meter_loop():
 
 # -------- HTTP control for simulating plug/unplug & local start/stop --------
 @app.post("/plug/{connector_id}")
-async def plug(connector_id: int):
+async def plug(connector_id: int, id_tag: str | None = None, auto_start: bool = False):
     c = model.get(connector_id)
     c.plugged = True
     c.state = EVSEState.PREPARING
     await send_status(connector_id)
+    if auto_start:
+        await start_local(connector_id, id_tag or "AUTO_TAG")
     return {"ok": True, "connector": connector_id, "plugged": True}
 
 @app.post("/unplug/{connector_id}")
