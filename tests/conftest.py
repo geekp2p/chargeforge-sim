@@ -46,7 +46,14 @@ class MockCSMS(CP):
         return call_result.HeartbeatPayload(current_time="0")
 
     @on(Action.StatusNotification)
-    async def on_status(self, **kwargs):
+    async def on_status(self, connector_id, error_code, status, **kwargs):
+        await self.status_notifications.put(
+            {
+                "connector_id": connector_id,
+                "error_code": error_code,
+                "status": status,
+            }
+        )
         return call_result.StatusNotificationPayload()
 
     @on(Action.MeterValues)
@@ -124,7 +131,11 @@ async def simulator():
     os.environ["CSMS_URL"] = csms.url
 
     # import after setting env vars so config picks them up
-    evse = importlib.import_module("sim.evse")
+    if "sim.evse" in sys.modules:
+        importlib.reload(sys.modules["sim.config"])
+        evse = importlib.reload(sys.modules["sim.evse"])
+    else:
+        evse = importlib.import_module("sim.evse")
 
     ocpp_task = asyncio.create_task(evse.ocpp_client())
 
@@ -133,7 +144,7 @@ async def simulator():
     transport = httpx.ASGITransport(app=evse.app)
     client = httpx.AsyncClient(transport=transport, base_url="http://test")
     try:
-        yield {"csms": csms, "client": client}
+        yield {"csms": csms, "client": client, "evse": evse}
     finally:
         await client.aclose()
         ocpp_task.cancel()
