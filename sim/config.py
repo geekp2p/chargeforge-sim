@@ -7,7 +7,8 @@ TLS_CLIENT_CERT = os.getenv("TLS_CLIENT_CERT")
 TLS_CLIENT_KEY = os.getenv("TLS_CLIENT_KEY")
 
 CPID = os.getenv("CPID", "TestCP01")
-CONNECTORS = int(os.getenv("CONNECTORS", "1"))
+# default to two connectors for more realistic multi-port chargers
+CONNECTORS = int(os.getenv("CONNECTORS", "2"))
 
 # information used in BootNotification to mimic a real charger
 CP_VENDOR = os.getenv("CP_VENDOR", "Gresgying")

@@ -29,3 +29,20 @@ async def test_start_with_custom_id_tag():
     assert cp.recorded == [(1, "TAG123")]
     assert cp.pending_start[1]["id_tag"] == "TAG123"
     connected_cps.pop("CP1", None)
+
+
+@pytest.mark.asyncio
+async def test_start_accepts_aliases():
+    """The start endpoint should handle both camelCase and snake_case keys."""
+    cp = DummyCP()
+    connected_cps["CP1"] = cp
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/start",
+            json={"cpid": "CP1", "connector_id": 1, "idTag": "TAG456"},
+        )
+    assert resp.status_code == 200
+    assert cp.recorded == [(1, "TAG456")]
+    assert cp.pending_start[1]["id_tag"] == "TAG456"
+    connected_cps.pop("CP1", None)

@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+import itertools
 from pathlib import Path
 import importlib
 
@@ -28,6 +29,7 @@ class MockCSMS(CP):
         self.stop_requests: asyncio.Queue = asyncio.Queue()
         self.boot_notifications: asyncio.Queue = asyncio.Queue()
         self.status_notifications: asyncio.Queue = asyncio.Queue()
+        self._tx_counter = itertools.count(1)
 
     # ---- handlers for messages from EVSE ----
     @on(Action.BootNotification)
@@ -64,8 +66,9 @@ class MockCSMS(CP):
     @on(Action.StartTransaction)
     async def on_start(self, connector_id, id_tag, meter_start, timestamp, **kwargs):
         await self.start_requests.put({"connector_id": connector_id, "id_tag": id_tag})
+        tx_id = next(self._tx_counter)
         return call_result.StartTransactionPayload(
-            transaction_id=1,
+            transaction_id=tx_id,
             id_tag_info={"status": AuthorizationStatus.accepted},
         )
 
