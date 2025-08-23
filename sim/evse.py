@@ -27,6 +27,13 @@ async def health():
     return {"ok": True}
 
 model = EVSEModel(connectors=CONNECTORS, meter_start_wh=METER_START_WH)
+
+
+def _get_connector(connector_id: int):
+    try:
+        return model.get(connector_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="unknown connector")
 cp = None  # type: ignore
 
 # -------- helper: send StatusNotification --------
@@ -252,7 +259,7 @@ async def send_meter_loop():
 # -------- HTTP control for simulating plug/unplug & local start/stop --------
 @app.post("/plug/{connector_id}")
 async def plug(connector_id: int, id_tag: str | None = None, auto_start: bool = False):
-    c = model.get(connector_id)
+    c = _get_connector(connector_id)
     c.plugged = True
     c.state = EVSEState.PREPARING
     await send_status(connector_id)
@@ -262,7 +269,7 @@ async def plug(connector_id: int, id_tag: str | None = None, auto_start: bool = 
 
 @app.post("/unplug/{connector_id}")
 async def unplug(connector_id: int):
-    c = model.get(connector_id)
+    c = _get_connector(connector_id)
     c.plugged = False
     if c.tx_id is not None:
         model.clear_tx(c.tx_id)
@@ -273,7 +280,7 @@ async def unplug(connector_id: int):
 
 @app.post("/local_start/{connector_id}")
 async def local_start(connector_id: int, id_tag: str = "LOCAL_TAG"):
-    c = model.get(connector_id)
+    c = _get_connector(connector_id)
     if not c.plugged:
         return {"ok": False, "error": "not plugged"}
     await start_local(connector_id, id_tag)
@@ -281,7 +288,7 @@ async def local_start(connector_id: int, id_tag: str = "LOCAL_TAG"):
 
 @app.post("/local_stop/{connector_id}")
 async def local_stop(connector_id: int):
-    c = model.get(connector_id)
+    c = _get_connector(connector_id)
     if not c.session_active:
         return {"ok": False, "error": "no active session"}
     await stop_local_by_tx(c.tx_id, c.meter_wh)  # type: ignore
@@ -291,30 +298,35 @@ async def local_stop(connector_id: int):
 
 @app.post("/fault/{connector_id}")
 async def inject_fault(connector_id: int, error_code: str = "OtherError"):
+    _get_connector(connector_id)
     c = model.set_fault(connector_id, error_code)
     await send_status(connector_id)
     return {"ok": True, "connector": connector_id, "error_code": c.error_code}
 
 @app.post("/clear_fault/{connector_id}")
 async def clear_fault(connector_id: int):
+    _get_connector(connector_id)
     model.clear_fault(connector_id)
     await send_status(connector_id)
     return {"ok": True, "connector": connector_id}
 
 @app.post("/suspend_ev/{connector_id}")
 async def suspend_ev(connector_id: int):
+    _get_connector(connector_id)
     model.set_state(connector_id, EVSEState.SUSPENDED_EV)
     await send_status(connector_id)
     return {"ok": True, "connector": connector_id, "state": EVSEState.SUSPENDED_EV}
 
 @app.post("/suspend_evse/{connector_id}")
 async def suspend_evse(connector_id: int):
+    _get_connector(connector_id)
     model.set_state(connector_id, EVSEState.SUSPENDED_EVSE)
     await send_status(connector_id)
     return {"ok": True, "connector": connector_id, "state": EVSEState.SUSPENDED_EVSE}
 
 @app.post("/resume/{connector_id}")
 async def resume(connector_id: int):
+    _get_connector(connector_id)
     model.set_state(connector_id, EVSEState.AVAILABLE)
     await send_status(connector_id)
     return {"ok": True, "connector": connector_id, "state": EVSEState.AVAILABLE}

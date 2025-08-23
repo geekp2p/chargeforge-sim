@@ -1,9 +1,13 @@
 # คู่มือการจำลองการใช้งาน CSMS (Windows 11 CMD)
 
-## 1. ตรวจสอบว่าไม่มีเซสชัน active
-curl -H "X-API-Key: changeme-123" http://localhost:8080/api/v1/active
+> หากต้องการทดสอบหลายหัวชาร์จ ให้กำหนดตัวแปรสภาพแวดล้อม `CONNECTORS`
+> ตัวอย่าง: `CONNECTORS=2 docker compose up`
+> จากนั้นสามารถใช้หมายเลขหัวชาร์จ 1 หรือ 2 ในคำสั่งด้านล่างได้
 
-ควรได้ผลลัพธ์: {"sessions":[]}
+## 1. ตรวจสอบว่าไม่มีเซสชัน active
+curl -H 'X-API-Key: changeme-123' http://localhost:8080/api/v1/active
+
+ควรได้ผลลัพธ์: {'sessions':[]}
 
 ---
 
@@ -13,31 +17,41 @@ curl -X POST http://localhost:7071/plug/1
 ---
 
 ## 3. สั่งเริ่มชาร์จ (Remote Start) ผ่าน CSMS
-curl -X POST http://localhost:8080/api/v1/start -H "Content-Type: application/json" -H "X-API-Key: changeme-123" -d "{\"cpid\":\"Gresgying02\",\"connectorId\":1,\"id_tag\":\"VID:FCA47A147858\"}"
+curl -X POST http://localhost:8080/api/v1/start -H 'Content-Type: application/json' -H 'X-API-Key: changeme-123' -d '{"cpid":"Gresgying02","connectorId":1,"id_tag":"VID:FCA47A147858"}'
 
 ---
 
 ## 4. ตรวจสอบว่ามีเซสชัน active แล้ว
-curl -H "X-API-Key: changeme-123" http://localhost:8080/api/v1/active
+curl -H 'X-API-Key: changeme-123' http://localhost:8080/api/v1/active
 
 ควรเห็น session ของ Gresgying02 พร้อม transactionId ที่ CSMS กำหนด
 
 ---
 
 ## 5. สั่งหยุดชาร์จ (Remote Stop)
-curl -X POST http://localhost:8080/api/v1/stop -H "Content-Type: application/json" -H "X-API-Key: changeme-123" -d "{\"cpid\":\"Gresgying02\",\"transactionId\":1}"
+curl -X POST http://localhost:8080/api/v1/stop -H 'Content-Type: application/json' -H 'X-API-Key: changeme-123' -d '{"cpid":"Gresgying02","transactionId":1}'
 
 ---
 
 ## 6. ตรวจสอบอีกครั้งว่าไม่มีเซสชัน active
-curl -H "X-API-Key: changeme-123" http://localhost:8080/api/v1/active
+curl -H 'X-API-Key: changeme-123' http://localhost:8080/api/v1/active
 
-ควรได้ {"sessions":[]}
+ควรได้ {'sessions':[]}
 
 ---
 
 ## 7. ดึงสายออกจากหัวชาร์จหมายเลข 1
 curl -X POST http://localhost:7071/unplug/1
+
+---
+
+## ตัวอย่างการใช้งานหัวชาร์จหมายเลข 2
+```
+curl -X POST http://localhost:7071/plug/2
+curl -X POST http://localhost:8080/api/v1/start -H 'Content-Type: application/json' -H 'X-API-Key: changeme-123' -d '{"cpid":"Gresgying02","connectorId":2,"id_tag":"VID:FCA47A147858"}'
+curl -X POST http://localhost:8080/charge/stop -H 'Content-Type: application/json' -H 'X-API-Key: changeme-123' -d '{"cpid":"Gresgying02","connectorId":2}'
+curl -X POST http://localhost:7071/unplug/2
+```
 
 ---
 
