@@ -27,6 +27,7 @@ class MockCSMS(CP):
         self.start_requests: asyncio.Queue = asyncio.Queue()
         self.stop_requests: asyncio.Queue = asyncio.Queue()
         self.boot_notifications: asyncio.Queue = asyncio.Queue()
+        self.status_notifications: asyncio.Queue = asyncio.Queue()
 
     # ---- handlers for messages from EVSE ----
     @on(Action.BootNotification)

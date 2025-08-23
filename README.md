@@ -171,3 +171,12 @@ curl -X POST http://localhost:7071/unplug/1
 - ถอดสาย (unplug)
 
 ทั้งหมดสามารถตรวจสอบสถานะได้ผ่าน CSMS อย่างครบถ้วน 🚗⚡
+
+:: ตรวจสอบ health
+curl -H "X-API-Key: changeme-123" http://localhost:8080/api/v1/health
+
+:: หยุดการชาร์จโดยระบุ connectorId โดยตรง
+curl -X POST http://localhost:8080/charge/stop -H "Content-Type: application/json" -H "X-API-Key: changeme-123" -d "{^"cpid^":^"Gresgying02^",^"connectorId^":1}"
+
+:: ปลดล็อกหัวชาร์จ
+curl -X POST http://localhost:8080/api/v1/release -H "Content-Type: application/json" -H "X-API-Key: changeme-123" -d "{^"cpid^":^"Gresgying02^",^"connectorId^":1}"

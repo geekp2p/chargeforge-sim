@@ -312,9 +312,10 @@ class CentralSystem(ChargePoint):
                 self.active_tx.pop(c_id, None)
                 break
         logging.info(f"← StopTransaction from {self.id}: tx={transaction_id}, meterStop={meter_stop}")
-        return call_result.StopTransactionPayload(
-            id_tag_info={"status": AuthorizationStatus.accepted}
-        )
+        resp_cls = getattr(call_result, "StopTransaction", None)
+        if resp_cls is None:
+            resp_cls = getattr(call_result, "StopTransactionPayload")
+        return resp_cls(id_tag_info={"status": AuthorizationStatus.accepted})
 
 
 # ================================
