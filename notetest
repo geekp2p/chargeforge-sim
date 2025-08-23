@@ -1,0 +1,17 @@
+✅ pytest tests/test_fault_and_suspend.py -q
+
+✅ pytest tests/test_simulator.py::test_boot_notification_sent -q
+
+✅ pytest tests/test_simulator.py::test_health_endpoint -q
+
+✅ pytest tests/test_simulator.py::test_local_start_stop -q
+
+✅ pytest tests/test_simulator.py::test_remote_start_stop -q
+
+✅ pytest tests/test_simulator.py::test_remote_unlock -q
+
+✅ pytest tests/test_simulator.py::test_plug_auto_start -q
+
+✅ pytest tests/test_start_api.py -q
+
+✅ pytest tests/test_stop_api.py -q
