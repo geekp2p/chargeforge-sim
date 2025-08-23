@@ -42,6 +42,15 @@ async def test_local_start_stop(simulator):
     assert int(stop["transaction_id"]) == 1
 
 
+
+@pytest.mark.asyncio
+async def test_unknown_connector_returns_404(simulator):
+    client = simulator["client"]
+
+    resp = await client.post("/plug/2")
+    assert resp.status_code == 404
+
+
 @pytest.mark.asyncio
 async def test_remote_start_stop(simulator):
     client = simulator["client"]

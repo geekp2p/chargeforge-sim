@@ -6,7 +6,7 @@ import random
 import ssl
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import websockets
 
 from ocpp.v16 import call
